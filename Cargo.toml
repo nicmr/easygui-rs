@@ -1,0 +1,6 @@
+[package]
+name = "easygui-rs"
+version = "0.1.0"
+authors = ["Nicolas Mohr <Nico.Mohr@gmx.net>"]
+
+[dependencies]
