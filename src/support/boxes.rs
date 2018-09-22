@@ -8,7 +8,7 @@ use conrod::backend::glium::glium;
 pub const WIN_W: u32 = 600;
 pub const WIN_H: u32 = 420;
 
-pub struct YNApp{
+pub struct EmptyApp{
 
 }
 
@@ -37,7 +37,7 @@ pub fn theme() -> conrod::Theme{
 
 
 widget_ids! {
-    pub struct Ids{
+    pub struct YNIds{
         // The main canvasls
         canvas,
 
@@ -49,9 +49,17 @@ widget_ids! {
     }
 }
 
-pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp, settings: YNSettings) -> Option<bool>{
+#[derive(Debug, Clone, Copy)]
+pub struct YNSettings<'a> {
+    pub title: &'a str,
+    pub text: &'a str,
+    pub yesbutton: &'a str,
+    pub nobutton: &'a str,
+}
+
+pub fn ynbox(ui: &mut conrod::UiCell, ids: &YNIds, app: &mut EmptyApp, settings: YNSettings) -> Option<bool>{
     use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
-    use std::iter::once;
+    //use std::iter::once;
 
 
     const MARGIN: conrod::Scalar = 30.0;
@@ -99,14 +107,70 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp, settings: YNSe
             return Some(false);
         }
 
-    None
-    
+    None 
+}
+
+
+
+widget_ids! {
+    pub struct MsgIds{
+        // The main canvasls
+        canvas,
+
+        //The title, text and buttons
+        title,
+        text,
+        okbutton,
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct YNSettings<'a> {
+pub struct MsgSettings<'a> {
     pub title: &'a str,
     pub text: &'a str,
-    pub yesbutton: &'a str,
-    pub nobutton: &'a str,
+    pub okbutton: &'a str,
+}
+
+pub fn msgbox(ui: &mut conrod::UiCell, ids: &MsgIds, app: &mut EmptyApp, settings: MsgSettings) -> Option<bool>{
+    use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
+    //use std::iter::once;
+
+
+    const MARGIN: conrod::Scalar = 30.0;
+    const SHAPE_GAP: conrod::Scalar = 50.0;
+    const TITLE_SIZE: conrod::FontSize = 42;
+    const SUBTITLE_SIZE: conrod::FontSize = 32;
+
+
+
+    //Canvas
+    widget::Canvas::new().pad(MARGIN).scroll_kids_vertically().set(ids.canvas, ui);
+
+    //Title
+    //const TITLE: &'static str = "YNBox Title"; //conrod example style
+    widget::Text::new(settings.title).font_size(TITLE_SIZE).mid_top_of(ids.canvas).set(ids.title, ui);
+
+    // Text
+    // const TEXT: &'static str = "This is the sample text for the ynbox"; //cornod example style
+    
+    widget::Text::new(settings.text)
+        .padded_w_of(ids.canvas, MARGIN)
+        .down(60.0)
+        .align_middle_x_of(ids.canvas)
+        .center_justify()
+        .line_spacing(5.0)
+        .set(ids.text, ui);
+
+    let button_side = 100.0;
+    for _press in widget::Button::new()
+        .label(settings.okbutton)
+        //.mid_left_with_margin_on(ids.canvas, MARGIN)
+        .mid_bottom()
+        .down_from(ids.text, 60.0)
+        .w_h(button_side, button_side)
+        .set(ids.okbutton, ui)
+        {
+            return Some(true);
+        }
+    None 
 }
