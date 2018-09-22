@@ -16,7 +16,7 @@ mod tests {
 
     #[test]
     fn ynbox_test() {
-        feature::ynbox();
+        feature::ynbox("ynbox test title", "select your choice", "Ok", "Cancel");
     }
 }
 // #[cfg(all(feature="winit", feature="glium"))] #[macro_use] extern crate conrod;
@@ -137,11 +137,14 @@ mod feature {
         }
     }
 
-    pub fn ynbox() {
+    pub fn ynbox(title: &str, text: &str, yesbutton: &str, nobutton: &str) {
+        let settings = support::boxes::YNSettings{
+            title, text, yesbutton, nobutton
+        };
         //build event loop, window, context, display
         let mut events_loop = glium::glutin::EventsLoop::new();
         let window = glium::glutin::WindowBuilder::new()
-            .with_title("Your YNBox with glium")
+            .with_title(title)
             .with_dimensions((WIN_W, WIN_H).into());
         let context = glium::glutin::ContextBuilder::new()
             .with_vsync(true)
@@ -191,7 +194,7 @@ mod feature {
                 }
 
             }
-            support::boxes::ynbox(&mut ui.set_widgets(), &ids, &mut app);
+            support::boxes::ynbox(&mut ui.set_widgets(), &ids, &mut app, settings);
 
             if let Some(primitives) = ui.draw_if_changed() {
                 renderer.fill(&display, primitives, &image_map); //possilby not needed, no images used

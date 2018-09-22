@@ -42,7 +42,7 @@ pub fn theme() -> conrod::Theme{
 
 widget_ids! {
     pub struct Ids{
-        // The main canvas
+        // The main canvasls
         canvas,
 
         //The title, text and buttons
@@ -53,7 +53,7 @@ widget_ids! {
     }
 }
 
-pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp){
+pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp, settings: YNSettings){
     use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
     use std::iter::once;
 
@@ -66,15 +66,16 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp){
 
 
     //Canvas
-    const TITLE: &'static str = "YNBox Title";
     widget::Canvas::new().pad(MARGIN).scroll_kids_vertically().set(ids.canvas, ui);
 
     //Title
-    widget::Text::new(TITLE).font_size(TITLE_SIZE).mid_top_of(ids.canvas).set(ids.title, ui);
+    //const TITLE: &'static str = "YNBox Title"; //conrod example style
+    widget::Text::new(settings.title).font_size(TITLE_SIZE).mid_top_of(ids.canvas).set(ids.title, ui);
 
     // Text
-    const TEXT: &'static str = "This is the sample text for the ynbox";
-    widget::Text::new(TEXT)
+    // const TEXT: &'static str = "This is the sample text for the ynbox"; //cornod example style
+    
+    widget::Text::new(settings.text)
         .padded_w_of(ids.canvas, MARGIN)
         .down(60.0)
         .align_middle_x_of(ids.canvas)
@@ -84,7 +85,7 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp){
 
     let button_side = 100.0;
     for _press in widget::Button::new()
-        .label("Yesbutton")
+        .label(settings.yesbutton)
         .mid_left_with_margin_on(ids.canvas, MARGIN)
         .down_from(ids.text, 60.0)
         .w_h(button_side, button_side)
@@ -93,7 +94,7 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp){
             println!("This is where I would return true!")
         }
     for _press in widget::Button::new()
-        .label("Nobutton")
+        .label(settings.nobutton)
         .mid_right_with_margin_on(ids.canvas, MARGIN)
         .down_from(ids.text, 60.0)
         .w_h(button_side, button_side)
@@ -102,4 +103,12 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp){
             println!("This is where I would return false!")
         }
     
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct YNSettings<'a> {
+    pub title: &'a str,
+    pub text: &'a str,
+    pub yesbutton: &'a str,
+    pub nobutton: &'a str,
 }
