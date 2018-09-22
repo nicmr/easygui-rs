@@ -4,3 +4,16 @@ version = "0.1.0"
 authors = ["Nicolas Mohr <Nico.Mohr@gmx.net>"]
 
 [dependencies]
+#conrod = "0.61.1"
+find_folder = "0.3.0"
+image = "0.19.0"
+rand = "0.5.5"
+
+
+[features]
+winit = ["conrod/winit"]
+glium = ["conrod/glium"]
+
+[dependencies.conrod]
+version = "0.61.1"
+features = ["winit", "glium"]
