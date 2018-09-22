@@ -16,7 +16,8 @@ mod tests {
 
     #[test]
     fn ynbox_test() {
-        feature::ynbox("ynbox test title", "select your choice", "Ok", "Cancel");
+        let choice = feature::ynbox("ynbox test title", "select your choice", "Ok", "Cancel");
+        println!("choice is {:?}", choice);
     }
 }
 // #[cfg(all(feature="winit", feature="glium"))] #[macro_use] extern crate conrod;
@@ -137,7 +138,7 @@ mod feature {
         }
     }
 
-    pub fn ynbox(title: &str, text: &str, yesbutton: &str, nobutton: &str) {
+    pub fn ynbox(title: &str, text: &str, yesbutton: &str, nobutton: &str) -> Option<bool>{
         let settings = support::boxes::YNSettings{
             title, text, yesbutton, nobutton
         };
@@ -194,7 +195,9 @@ mod feature {
                 }
 
             }
-            support::boxes::ynbox(&mut ui.set_widgets(), &ids, &mut app, settings);
+            if let Some(response) = support::boxes::ynbox(&mut ui.set_widgets(), &ids, &mut app, settings){
+                return Some(response);
+            }
 
             if let Some(primitives) = ui.draw_if_changed() {
                 renderer.fill(&display, primitives, &image_map); //possilby not needed, no images used
@@ -204,8 +207,7 @@ mod feature {
                 target.finish().unwrap();
             }
         }
-        
-
+        //UI gets exited without user making a choice
+        None
     }
-
 }

@@ -1,7 +1,3 @@
-
-
-
-
 use conrod;
 use std;
 
@@ -53,7 +49,7 @@ widget_ids! {
     }
 }
 
-pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp, settings: YNSettings){
+pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp, settings: YNSettings) -> Option<bool>{
     use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
     use std::iter::once;
 
@@ -91,7 +87,7 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp, settings: YNSe
         .w_h(button_side, button_side)
         .set(ids.yesbutton, ui)
         {
-            println!("This is where I would return true!")
+            return Some(true);
         }
     for _press in widget::Button::new()
         .label(settings.nobutton)
@@ -100,8 +96,10 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &Ids, app: &mut YNApp, settings: YNSe
         .w_h(button_side, button_side)
         .set(ids.nobutton, ui)
         {
-            println!("This is where I would return false!")
+            return Some(false);
         }
+
+    None
     
 }
 
