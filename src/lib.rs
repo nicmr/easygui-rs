@@ -10,7 +10,6 @@ mod tests {
     #[test]
     fn conrod_test() {
         feature::example();
-        assert_eq!(2 + 2, 4);
     }
 
     #[test]
@@ -23,6 +22,11 @@ mod tests {
     fn msgbox_test() {
         let confirmation = feature::msgbox("msgbox test title", "Please confirm this", "Ok");
         println!("confirmation is {:?}", confirmation);
+    }
+
+    fn list_test() {
+        let list_items = vec! [ String::from("Dog"), String::from("Cat"), String::from("Elephant")];
+        let choice  = feature::listbox("Animals", "Choose your favourite animal", list_items)
     }
 }
 
@@ -240,6 +244,14 @@ pub mod feature{
         }
         //UI gets exited without user making a choice
         None
+    }
+
+    pub fn listbox(title: &str, text: &str, list: &Vec<String>) -> Option<usize>{
+        let list_text_container = boxes::ListTextContainer::from_strs(title, text, okbutton);
+        let mut conset = ConrodSettings::load_defaults(list_text_container);
+        let ids = support::boxes::MsgIds::new(conset.ui.widget_id_generator());
+
+        let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
     }
 
 
