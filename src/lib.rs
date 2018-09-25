@@ -24,18 +24,7 @@ mod tests {
         let confirmation = feature::msgbox("msgbox test title", "Please confirm this", "Ok");
         println!("confirmation is {:?}", confirmation);
     }
-
-    #[test]
-    fn msgbox_rework_test() {
-        let confirmation = feature::reworked_msgbox("msgbox test title", "Please confirm this", "Ok");
-        println!("confirmation is {:?}", confirmation);
-    }
 }
-// #[cfg(all(feature="winit", feature="glium"))] #[macro_use] extern crate conrod;
-// #[cfg(all(feature="winit", feature="glium"))] mod support;
-
-
-
 
 
 
@@ -44,6 +33,8 @@ mod support;
 
 pub mod feature{
     use support;
+    use support::boxes;
+    use support::boxes::{TextContainer, ConrodIds};
     use std;
     use conrod;
     extern crate find_folder;
@@ -155,43 +146,17 @@ pub mod feature{
     }
 
     pub fn ynbox(title: &str, text: &str, yesbutton: &str, nobutton: &str) -> Option<bool>{
-        let settings = support::boxes::YNSettings{
-            title, text, yesbutton, nobutton
-        };
-        //build event loop, window, context, display
-        let mut events_loop = glium::glutin::EventsLoop::new();
-        let window = glium::glutin::WindowBuilder::new()
-            .with_title(title)
-            .with_dimensions((WIN_W, WIN_H).into());
-        let context = glium::glutin::ContextBuilder::new()
-            .with_vsync(true)
-            .with_multisampling(4);
-        let display = glium::Display::new(window, context, &events_loop).unwrap();
+        let yntextcontainer = boxes::YNTextContainer::from_strs(title, text, yesbutton, nobutton);
+        let mut conset = ConrodSettings::load_defaults(yntextcontainer);
+        let ids = boxes::YNIds::new(conset.ui.widget_id_generator());
 
-        // build ui
-        let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).theme(support::boxes::theme()).build();
+        let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
 
-
-        let ids = support::boxes::YNIds::new(ui.widget_id_generator());
-
-        let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
-        let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
-        ui.fonts.insert_from_file(font_path).unwrap();
-
-
-        let mut image_map: conrod::image::Map<conrod::glium::Texture2d> = conrod::image::Map::new(); //possilby not needed, no images useds
-
-        let mut app = support::boxes::EmptyApp{};
-
-        let mut renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
-
-
-        let mut event_loop = support::EventLoop::new();
         'ynlabel: loop {
-            for event in event_loop.next(&mut events_loop) { 
-                if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &display) {
-                    ui.handle_event(event);
-                    event_loop.needs_update();
+            for event in conset.event_loop.next(&mut conset.events_loop) { 
+                if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &conset.display) {
+                    conset.ui.handle_event(event);
+                    conset.event_loop.needs_update();
                 }
                 match event {
                     //handle all events that request closing of the application
@@ -211,15 +176,15 @@ pub mod feature{
                 }
 
             }
-            if let Some(response) = support::boxes::ynbox(&mut ui.set_widgets(), &ids, &mut app, settings){
+            if let Some(response) = support::boxes::ynbox(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
                 return Some(response);
             }
 
-            if let Some(primitives) = ui.draw_if_changed() {
-                renderer.fill(&display, primitives, &image_map); //possilby not needed, no images used
-                let mut target = display.draw();
+            if let Some(primitives) = conset.ui.draw_if_changed() {
+                renderer.fill(&conset.display, primitives, &conset.image_map); //possilby not needed, no images used
+                let mut target = conset.display.draw();
                 target.clear_color(0.0, 0.0, 0.0, 1.0);
-                renderer.draw(&display, &mut target, &image_map).unwrap();
+                renderer.draw(&conset.display, &mut target, &conset.image_map).unwrap();
                 target.finish().unwrap();
             }
         }
@@ -228,80 +193,10 @@ pub mod feature{
     }
 
     pub fn msgbox(title: &str, text: &str, okbutton: &str) -> Option<bool>{
-        let settings = support::boxes::MsgSettings{
-            title, text, okbutton,
-        };
-        //build event loop, window, context, display
-        let mut events_loop = glium::glutin::EventsLoop::new();
-        let window = glium::glutin::WindowBuilder::new()
-            .with_title(title)
-            .with_dimensions((WIN_W, WIN_H).into());
-        let context = glium::glutin::ContextBuilder::new()
-            .with_vsync(true)
-            .with_multisampling(4);
-        let display = glium::Display::new(window, context, &events_loop).unwrap();
 
-        // build ui
-        let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).theme(support::boxes::theme()).build();
-
-
-        let ids = support::boxes::MsgIds::new(ui.widget_id_generator());
-
-        let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
-        let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
-        ui.fonts.insert_from_file(font_path).unwrap();
-
-
-        let mut image_map: conrod::image::Map<conrod::glium::Texture2d> = conrod::image::Map::new(); //possilby not needed, no images useds
-
-        let mut app = support::boxes::EmptyApp{};
-
-        let mut renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
-
-        let mut event_loop = support::EventLoop::new();
-
-        'ynlabel: loop {
-            for event in event_loop.next(&mut events_loop) { 
-                if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &display) {
-                    ui.handle_event(event);
-                    event_loop.needs_update();
-                }
-                match event {
-                    //handle all events that request closing of the application
-                    //use glium::glutin;
-
-                    glium::glutin::Event::WindowEvent {event, ..} => match event {
-                        glium::glutin::WindowEvent::CloseRequested |
-                        glium::glutin::WindowEvent::KeyboardInput { 
-                            input: glium::glutin::KeyboardInput {
-                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
-                                ..
-                            },
-                            ..
-                        } => break 'ynlabel,
-                        _ => (),
-                    }
-                    _ => (),
-                }
-
-            }
-            if let Some(response) = support::boxes::msgbox(&mut ui.set_widgets(), &ids, &mut app, settings){
-                return Some(response);
-            }
-
-            if let Some(primitives) = ui.draw_if_changed() {
-                renderer.fill(&display, primitives, &image_map); //possilby not needed, no images used
-                let mut target = display.draw();
-                target.clear_color(0.0, 0.0, 0.0, 1.0);
-                renderer.draw(&display, &mut target, &image_map).unwrap();
-                target.finish().unwrap();
-            }
-        }
-        //UI gets exited without user making a choice
-        None
-    }
-    pub fn reworked_msgbox(title: &str, text: &str, okbutton: &str) -> Option<bool>{
-        let mut conset = ConrodSettings::load_defaults(title, text, okbutton);
+        let msgtextcontainer = support::boxes::MsgTextContainer::from_strs(title, text, okbutton);
+        let mut conset = ConrodSettings::load_defaults(msgtextcontainer);
+        let ids = support::boxes::MsgIds::new(conset.ui.widget_id_generator());
 
         let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
 
@@ -331,7 +226,7 @@ pub mod feature{
                 }
 
             }
-            if let Some(response) = support::boxes::msgbox(&mut conset.ui.set_widgets(), &conset.ids, &mut conset.app, conset.win_settings){
+            if let Some(response) = support::boxes::msgbox(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
                 return Some(response);
             }
 
@@ -349,34 +244,32 @@ pub mod feature{
 
 
 
-    struct ConrodSettings<'a>{
-        win_settings: support::boxes::MsgSettings<'a>, //make generic instead
+    struct ConrodSettings<T: TextContainer>{
+        text_container: T,
         events_loop: glium::glutin::EventsLoop,
         event_loop: support::EventLoop,
         display: glium::Display,
         ui: conrod::Ui,
-        ids: support::boxes::MsgIds, //make generic instead
         image_map: conrod::image::Map<conrod::glium::Texture2d>,
         app: support::boxes::EmptyApp,
     }
-    impl<'a> ConrodSettings<'a>{
-        pub fn load_defaults(title: &'a str, text: &'a str, okbutton: &'a str)-> ConrodSettings<'a>{
+    impl<T> ConrodSettings<T> where T: TextContainer{
+        /// Returns a struct that contains the default settings to open a conrod window with
+        pub fn load_defaults(textcontainer: T) -> ConrodSettings<T>{
 
 
             let events_loop = glium::glutin::EventsLoop::new();
 
             //window and context builders, consumed to create display
-            let window = glium::glutin::WindowBuilder::new().with_title(title).with_dimensions((WIN_W, WIN_H).into());
+            let window = glium::glutin::WindowBuilder::new().with_title(textcontainer.title()).with_dimensions((WIN_W, WIN_H).into());
             let context = glium::glutin::ContextBuilder::new().with_vsync(true).with_multisampling(4);
 
             let display = glium::Display::new(window, context, &events_loop).unwrap();
             
             let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).theme(support::boxes::theme()).build();
-            
-            let ids = support::boxes::MsgIds::new(ui.widget_id_generator());
 
             let mut settings = ConrodSettings{
-                win_settings: support::boxes::MsgSettings{title, text, okbutton,},
+                text_container: textcontainer,
 
                 //events_looop is a queue of occuredevents based on the backend,
                 //event_loop handles the current event independent of the backend
@@ -388,9 +281,7 @@ pub mod feature{
 
                 ui: ui,
 
-                ids: ids,
-
-                image_map: conrod::image::Map::new(), //possilby not needed, if no images used
+                image_map: conrod::image::Map::new(), //possibly not needed, if no images used
 
                 app: support::boxes::EmptyApp{},
             };
