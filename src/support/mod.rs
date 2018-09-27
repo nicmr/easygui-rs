@@ -13,18 +13,11 @@
 
 extern crate rand;
 
-
-pub mod boxes;
-
 use conrod;
 use std;
 
 // #[cfg(feature="glium")] use conrod::backend::glium::glium;
 use conrod::backend::glium::glium;
-
-
-pub const WIN_W: u32 = 600;
-pub const WIN_H: u32 = 420;
 
 
 /// A demonstration of some application state we want to control with a conrod GUI.
@@ -34,8 +27,6 @@ pub struct DemoApp {
     sine_frequency: f32,
     rust_logo: conrod::image::Id,
 }
-
-
 impl DemoApp {
 
     /// Simple constructor for the `DemoApp`.

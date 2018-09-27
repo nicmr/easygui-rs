@@ -23,31 +23,43 @@ mod tests {
         let confirmation = feature::msgbox("msgbox test title", "Please confirm this", "Ok");
         println!("confirmation is {:?}", confirmation);
     }
-
+    
+    #[test]
     fn list_test() {
         let list_items = vec! [ String::from("Dog"), String::from("Cat"), String::from("Elephant")];
-        let choice  = feature::listbox("Animals", "Choose your favourite animal", list_items)
+        let choice  = feature::listbox("Animals", "Choose your favourite animal", &list_items);
+        println!("{:?}", choice);
+    }
+
+    #[test]
+    fn other_list_test(){
+        feature::listbox_multiple()
     }
 }
 
 
-
+extern crate find_folder;
 #[macro_use] extern crate conrod;
 mod support;
+mod boxes;
+mod traits;
+mod constants;
 
 pub mod feature{
-    use support;
-    use support::boxes;
-    use support::boxes::{TextContainer, ConrodIds};
-    use std;
-    use conrod;
+
     extern crate find_folder;
     extern crate image;
+    use support;
+    use boxes;
+    use traits::{TextContainer};
+    use std;
+    use conrod;
+    use constants;
     use conrod::backend::glium::glium::{self, Surface};
 
     // The initial width and height in "points".
-    const WIN_W: u32 = support::WIN_W;
-    const WIN_H: u32 = support::WIN_H;
+    const WIN_W: u32 = constants::WIN_W;
+    const WIN_H: u32 = constants::WIN_H;
 
     pub fn example() {
 
@@ -180,7 +192,7 @@ pub mod feature{
                 }
 
             }
-            if let Some(response) = support::boxes::ynbox(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
+            if let Some(response) = boxes::ynbox(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
                 return Some(response);
             }
 
@@ -198,13 +210,11 @@ pub mod feature{
 
     pub fn msgbox(title: &str, text: &str, okbutton: &str) -> Option<bool>{
 
-        let msgtextcontainer = support::boxes::MsgTextContainer::from_strs(title, text, okbutton);
+        let msgtextcontainer = boxes::MsgTextContainer::from_strs(title, text, okbutton);
         let mut conset = ConrodSettings::load_defaults(msgtextcontainer);
-        let ids = support::boxes::MsgIds::new(conset.ui.widget_id_generator());
+        let ids = boxes::MsgIds::new(conset.ui.widget_id_generator());
 
         let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
-
-
         'ynlabel: loop {
             for event in conset.event_loop.next(&mut conset.events_loop) { 
                 if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &conset.display) {
@@ -230,7 +240,7 @@ pub mod feature{
                 }
 
             }
-            if let Some(response) = support::boxes::msgbox(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
+            if let Some(response) = boxes::msgbox(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
                 return Some(response);
             }
 
@@ -247,11 +257,54 @@ pub mod feature{
     }
 
     pub fn listbox(title: &str, text: &str, list: &Vec<String>) -> Option<usize>{
-        let list_text_container = boxes::ListTextContainer::from_strs(title, text, okbutton);
+        let list_text_container = boxes::ListTextContainer::from_strs(title, text, list);
         let mut conset = ConrodSettings::load_defaults(list_text_container);
-        let ids = support::boxes::MsgIds::new(conset.ui.widget_id_generator());
+        let ids = boxes::ListIds::new(conset.ui.widget_id_generator());
 
         let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
+        'main: loop {
+            for event in conset.event_loop.next(&mut conset.events_loop) { 
+                if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &conset.display) {
+                    conset.ui.handle_event(event);
+                    conset.event_loop.needs_update();
+                }
+                match event {
+                    //handle all events that request closing of the application
+                    //use glium::glutin;
+
+                    glium::glutin::Event::WindowEvent {event, ..} => match event {
+                        glium::glutin::WindowEvent::CloseRequested |
+                        glium::glutin::WindowEvent::KeyboardInput { 
+                            input: glium::glutin::KeyboardInput {
+                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
+                                ..
+                            },
+                            ..
+                        } => break 'main,
+                        _ => (),
+                    }
+                    _ => (),
+                }
+
+            }
+            if let Some(response) = boxes::listbox_single(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
+                return Some(response);
+            }
+
+            if let Some(primitives) = conset.ui.draw_if_changed() {
+                renderer.fill(&conset.display, primitives, &conset.image_map); //possilby not needed, no images used
+                let mut target = conset.display.draw();
+                target.clear_color(0.0, 0.0, 0.0, 1.0);
+                renderer.draw(&conset.display, &mut target, &conset.image_map).unwrap();
+                target.finish().unwrap();
+            }
+        }
+        
+
+        None
+    }
+    pub fn listbox_multiple(){
+        boxes::listbox_multiple();
     }
 
 
@@ -263,7 +316,7 @@ pub mod feature{
         display: glium::Display,
         ui: conrod::Ui,
         image_map: conrod::image::Map<conrod::glium::Texture2d>,
-        app: support::boxes::EmptyApp,
+        app: boxes::EmptyApp,
     }
     impl<T> ConrodSettings<T> where T: TextContainer{
         /// Returns a struct that contains the default settings to open a conrod window with
@@ -278,7 +331,7 @@ pub mod feature{
 
             let display = glium::Display::new(window, context, &events_loop).unwrap();
             
-            let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).theme(support::boxes::theme()).build();
+            let ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).theme(boxes::theme()).build();
 
             let mut settings = ConrodSettings{
                 text_container: textcontainer,
@@ -295,7 +348,7 @@ pub mod feature{
 
                 image_map: conrod::image::Map::new(), //possibly not needed, if no images used
 
-                app: support::boxes::EmptyApp{},
+                app: boxes::EmptyApp{},
             };
 
             let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
