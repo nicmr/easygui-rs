@@ -225,48 +225,7 @@ pub fn msgbox(text_container: &MsgTextContainer) -> Option<bool>{
     let ids = MsgIds::new(conset.ui.widget_id_generator());
 
     let _app = {};
-
-    let mut confirmation_state = None;
-
-    {
-        let ui_cell = &mut conset.ui.set_widgets();
-
-        //Canvas
-        widget::Canvas::new()
-            .pad(MARGIN)
-            .scroll_kids_vertically()
-            .set(ids.canvas, ui_cell);
-
-        //Title
-        widget::Text::new(&text_container.title)
-            .font_size(TITLE_SIZE)
-            .mid_top_of(ids.canvas)
-            .set(ids.title, ui_cell);
-
-        // Text   
-        widget::Text::new(&text_container.text)
-            .padded_w_of(ids.canvas, MARGIN)
-            .down(60.0)
-            .align_middle_x_of(ids.canvas)
-            .center_justify()
-            .line_spacing(5.0)
-            .set(ids.text, ui_cell);
-
-        //Ok button
-        let button_side = 100.0;
-        for _press in widget::Button::new()
-            .label(&text_container.okbutton)
-            //.mid_left_with_margin_on(ids.canvas, MARGIN)
-            .mid_bottom()
-            .down_from(ids.text, 50.0)
-            .w_h(button_side, button_side)
-            .set(ids.okbutton, ui_cell)
-            {
-                confirmation_state = Some(true);
-            }
-    }
         
-
     let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
         'ynlabel: loop {
             for event in conset.event_loop.next(&mut conset.events_loop) { 
@@ -293,9 +252,43 @@ pub fn msgbox(text_container: &MsgTextContainer) -> Option<bool>{
                 }
 
             }
-            // User has clicked the confirm button
-            if let Some(response) = confirmation_state{
-                return Some(response);
+
+            {
+                let ui_cell = &mut conset.ui.set_widgets();
+
+                //Canvas
+                widget::Canvas::new()
+                    .pad(MARGIN)
+                    .scroll_kids_vertically()
+                    .set(ids.canvas, ui_cell);
+
+                //Title
+                widget::Text::new(&text_container.title)
+                    .font_size(TITLE_SIZE)
+                    .mid_top_of(ids.canvas)
+                    .set(ids.title, ui_cell);
+
+                // Text   
+                widget::Text::new(&text_container.text)
+                    .padded_w_of(ids.canvas, MARGIN)
+                    .down(60.0)
+                    .align_middle_x_of(ids.canvas)
+                    .center_justify()
+                    .line_spacing(5.0)
+                    .set(ids.text, ui_cell);
+
+                //Ok button
+                let button_side = 100.0;
+                for _press in widget::Button::new()
+                    .label(&text_container.okbutton)
+                    //.mid_left_with_margin_on(ids.canvas, MARGIN)
+                    .mid_bottom()
+                    .down_from(ids.text, 50.0)
+                    .w_h(button_side, button_side)
+                    .set(ids.okbutton, ui_cell)
+                    {
+                        return Some(true);
+                    }
             }
 
             if let Some(primitives) = conset.ui.draw_if_changed() {
@@ -344,93 +337,7 @@ impl ListTextContainer{
     }
 }
 
-pub fn listbox_single(ui: &mut conrod::UiCell, ids: &ListIds, _app: &mut EmptyApp, text_container: &ListTextContainer) -> Option<usize>{
-
-    use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
-    use conrod::widget::list_select;
-    //Canvas
-    widget::Canvas::new().pad(MARGIN).scroll_kids_vertically().set(ids.canvas, ui);
-
-    //Title
-    widget::Text::new(&text_container.title).font_size(TITLE_SIZE).mid_top_of(ids.canvas).set(ids.title, ui);
-
-    //Text
-    widget::Text::new(&text_container.text)
-        .padded_w_of(ids.canvas, MARGIN)
-        .down(60.0)
-        .align_middle_x_of(ids.canvas)
-        .center_justify()
-        .line_spacing(5.0)
-        .set(ids.text, ui);
- 
-    let num_items = text_container.list_items.len();
-
-    //TODO: Turn these into constants instead
-    let item_h = 30.0;
-    let font_size = item_h as conrod::FontSize / 2;
-
-    let mut list_selected = std::collections::HashSet::new();
-
-    //Multiple select list
-    let (mut events, scrollbar) = list_select::ListSelect::multiple(num_items)
-        .flow_down()
-        .item_size(item_h)
-        .scrollbar_next_to()
-        .w_h(400.0, 230.0)
-        //.top_left_with_margins_on(ids.canvas, 40.0, 40.0)
-        .down_from(ids.text, 60.0)
-        .set(ids.list_select, ui);
-    
-    //Confirm button
-    let button_side = 100.0;
-    for _press in widget::Button::new()
-        .label("Confirm")
-        //.mid_left_with_margin_on(ids.canvas, MARGIN)
-        .mid_bottom()
-        .right_from(ids.list_select, 60.0)
-        .down_from(ids.text, 60.0)
-        .w_h(button_side, button_side)
-        .set(ids.confirm_button, ui)
-        {
-            return Some(1);
-        }
-
-
-    
-    while let Some(event) = events.next(ui, |i| list_selected.contains(&i)) {
-        use conrod::widget::list_select::Event;
-        match event {
-
-            // For the `Item` events we instantiate the `List`'s items.
-            Event::Item(item) => {
-                let label = &text_container.list_items[item.i];
-                let (color, label_color) = match list_selected.contains(&item.i) {
-                    true => (conrod::color::LIGHT_BLUE, conrod::color::YELLOW),
-                    false => (conrod::color::LIGHT_GREY, conrod::color::BLACK),
-                };
-                let button = widget::Button::new()
-                    .color(color)
-                    .label(label)
-                    .label_font_size(font_size)
-                    .label_color(label_color);
-                item.set(button, ui);
-            },
-
-            // The selection has changed.
-            Event::Selection(selection) => {
-                selection.update_index_set(&mut list_selected);
-                println!("selected indices: {:?}", list_selected);
-            },
-
-            // The remaining events indicate interactions with the `ListSelect` widget.
-            event => println!("{:?}", &event),
-        }
-    }
-    if let Some(s) = scrollbar { s.set(ui)};
-    None
-}
-
-pub fn listbox_multiple(text_container: &ListTextContainer){
+pub fn listbox_single(text_container: &ListTextContainer) -> Option<usize>{
     use find_folder;
     use support;
     //use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
@@ -475,25 +382,7 @@ pub fn listbox_multiple(text_container: &ListTextContainer){
     // The image map describing each of our widget->image mappings (in our case, none).
     let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
 
-    // List of entries to display. They should implement the Display trait.
-    // let list_items = [
-    //     "African Sideneck Turtle".to_string(),
-    //     "Alligator Snapping Turtle".to_string(),
-    //     "Common Snapping Turtle".to_string(),
-    //     "Indian Peacock Softshelled Turtle".to_string(),
-    //     "Eastern River Cooter".to_string(),
-    //     "Eastern Snake Necked Turtle".to_string(),
-    //     "Diamond Terrapin".to_string(),
-    //     "Indian Peacock Softshelled Turtle".to_string(),
-    //     "Musk Turtle".to_string(),
-    //     "Reeves Turtle".to_string(),
-    //     "Eastern Spiny Softshell Turtle".to_string(),
-    //     "Red Ear Slider Turtle".to_string(),
-    //     "Indian Tent Turtle".to_string(),
-    //     "Mud Turtle".to_string(),
-    //     "Painted Turtle".to_string(),
-    //     "Spotted Turtle".to_string()
-    // ];
+    
     let list_items = text_container.list_items.clone();
 
     // List of selections, should be same length as list of entries. Will be updated by the widget.
@@ -549,6 +438,21 @@ pub fn listbox_multiple(text_container: &ListTextContainer){
                 .top_left_with_margins_on(ids.canvas, 40.0, 40.0)
                 .set(ids.list_select, ui);
 
+            for _press in widget::Button::new()
+            .label("Confirm")
+            //.mid_left_with_margin_on(ids.canvas, MARGIN)
+            .mid_bottom()
+            .right_from(ids.list_select, 60.0)
+            //.down_from(ids.text, 60.0)
+            .w_h(100.0, 100.0)
+            .set(ids.confirm_button, ui)
+            {
+                if list_selected.len() == 0 {
+                    println!("please select an item before continuing");
+                }else{
+                    return Some(list_selected.into_iter().nth(0)?);
+                }                
+            }
             // Handle the `ListSelect`s events.
             while let Some(event) = events.next(ui, |i| list_selected.contains(&i)) {
                 use conrod::widget::list_select::Event;
@@ -594,4 +498,5 @@ pub fn listbox_multiple(text_container: &ListTextContainer){
             target.finish().unwrap();
         }
     }
+    None
 }

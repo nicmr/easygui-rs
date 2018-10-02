@@ -23,18 +23,12 @@ mod tests {
         let confirmation = feature::msgbox("msgbox test title", "Please confirm this", "Ok");
         println!("confirmation is {:?}", confirmation);
     }
-    
-    #[test]
-    fn list_test() {
-        let list_items = vec! [ String::from("Dog"), String::from("Cat"), String::from("Elephant")];
-        let choice  = feature::listbox("Animals", "Choose your favourite animal", &list_items);
-        println!("{:?}", choice);
-    }
 
     #[test]
-    fn other_list_test(){
+    fn list_test(){
         let list = vec! [ String::from("Dog"), String::from("Cat"), String::from("Elephant")];
-        feature::listbox_multiple(&list);
+        let choice = feature::listbox_single(&list).expect("the used failed to select an item");
+        println!("The user chose : {}", list[choice]);
     }
 }
 
@@ -212,60 +206,12 @@ pub mod feature{
 
         let msgtextcontainer = boxes::MsgTextContainer::from_strs(title, text, okbutton);
         let mut conset = boxes::ConrodSettings::load_defaults(msgtextcontainer);
-        let ids = boxes::MsgIds::new(conset.ui.widget_id_generator());
         boxes::msgbox(&conset.text_container)   
     }
-
-    pub fn listbox(title: &str, text: &str, list: &Vec<String>) -> Option<usize>{
-        let list_text_container = boxes::ListTextContainer::from_strs(title, text, list);
-        let mut conset = ConrodSettings::load_defaults(list_text_container);
-        let ids = boxes::ListIds::new(conset.ui.widget_id_generator());
-
-        let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
-        'main: loop {
-            for event in conset.event_loop.next(&mut conset.events_loop) { 
-                if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &conset.display) {
-                    conset.ui.handle_event(event);
-                    conset.event_loop.needs_update();
-                }
-                match event {
-                    //handle all events that request closing of the application
-                    //use glium::glutin;
-
-                    glium::glutin::Event::WindowEvent {event, ..} => match event {
-                        glium::glutin::WindowEvent::CloseRequested |
-                        glium::glutin::WindowEvent::KeyboardInput { 
-                            input: glium::glutin::KeyboardInput {
-                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
-                                ..
-                            },
-                            ..
-                        } => break 'main,
-                        _ => (),
-                    }
-                    _ => (),
-                }
-
-            }
-            if let Some(response) = boxes::listbox_single(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
-                return Some(response);
-            }
-
-            if let Some(primitives) = conset.ui.draw_if_changed() {
-                renderer.fill(&conset.display, primitives, &conset.image_map); //possilby not needed, no images used
-                let mut target = conset.display.draw();
-                target.clear_color(0.0, 0.0, 0.0, 1.0);
-                renderer.draw(&conset.display, &mut target, &conset.image_map).unwrap();
-                target.finish().unwrap();
-            }
-        }
-        
-
-        None
-    }
-    pub fn listbox_multiple(list: &Vec<String>){
+    
+    pub fn listbox_single(list: &Vec<String>) -> Option<usize>{
         let text_container = boxes::ListTextContainer::from_strs("sometitle", "sometext", list);
-        boxes::listbox_multiple(&text_container);
+        boxes::listbox_single(&text_container)
     }
 
 
