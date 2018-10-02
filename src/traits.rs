@@ -6,3 +6,9 @@ pub trait ConrodIds{
 pub trait TextContainer{
     fn title(&self) -> &str;
 }
+
+impl <'a, T> TextContainer for &'a T where T: TextContainer{
+    fn title(&self) -> &str {
+        (*self).title()
+    }
+}

@@ -1,7 +1,13 @@
+extern crate find_folder;
+
+
 use conrod;
 use std;
 use traits::{ConrodIds, TextContainer};
 use constants::{TITLE_SIZE, MARGIN};
+use conrod::backend::glium::glium;
+use support;
+use constants::{WIN_H, WIN_W};
 
 // use conrod::backend::glium::glium;
 
@@ -9,6 +15,56 @@ use constants::{TITLE_SIZE, MARGIN};
 /// An app struct is supposed to representing the state of the window. The Empty state struct is to be used a s a placeholder for stateless windows.
 pub struct EmptyApp{
 
+}
+
+pub struct ConrodSettings<T: TextContainer>{
+    pub text_container: T,
+    events_loop: glium::glutin::EventsLoop,
+    event_loop: support::EventLoop,
+    display: glium::Display,
+    pub ui: conrod::Ui,
+    image_map: conrod::image::Map<conrod::glium::Texture2d>,
+    app: EmptyApp,
+}
+impl<T> ConrodSettings<T> where T: TextContainer{
+    /// Returns a struct that contains the default settings to open a conrod window with
+    pub fn load_defaults(textcontainer: T) -> ConrodSettings<T>{
+
+
+        let events_loop = glium::glutin::EventsLoop::new();
+
+        //window and context builders, consumed to create display
+        let window = glium::glutin::WindowBuilder::new().with_title(textcontainer.title()).with_dimensions((WIN_W, WIN_H).into());
+        let context = glium::glutin::ContextBuilder::new().with_vsync(true).with_multisampling(4);
+
+        let display = glium::Display::new(window, context, &events_loop).unwrap();
+        
+        let ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).theme(theme()).build();
+
+        let mut settings = ConrodSettings{
+            text_container: textcontainer,
+
+            //events_looop is a queue of occuredevents based on the backend,
+            //event_loop handles the current event independent of the backend
+            events_loop: events_loop,
+
+            event_loop: support::EventLoop::new(),
+
+            display: display,
+
+            ui: ui,
+
+            image_map: conrod::image::Map::new(), //possibly not needed, if no images used
+
+            app: EmptyApp{},
+        };
+
+        let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+        let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
+        settings.ui.fonts.insert_from_file(font_path).unwrap();
+
+        settings
+    }
 }
 
 // TODO: add parameter to set name
@@ -76,21 +132,19 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &YNIds, _app: &mut EmptyApp, text_con
     use conrod::{widget, Labelable, Positionable, Sizeable, Widget};
     // use conrod::Colorable //unused so far
 
-
-    
-
-
-
     //Canvas
-    widget::Canvas::new().pad(MARGIN).scroll_kids_vertically().set(ids.canvas, ui);
+    widget::Canvas::new()
+        .pad(MARGIN)
+        .scroll_kids_vertically()
+        .set(ids.canvas, ui);
 
     //Title
-    //const TITLE: &'static str = "YNBox Title"; //conrod example style
-    widget::Text::new(&text_container.title).font_size(TITLE_SIZE).mid_top_of(ids.canvas).set(ids.title, ui);
+    widget::Text::new(&text_container.title)
+        .font_size(TITLE_SIZE)
+        .mid_top_of(ids.canvas)
+        .set(ids.title, ui);
 
-    // Text
-    // const TEXT: &'static str = "This is the sample text for the ynbox"; //cornod example style
-    
+    // Text   
     widget::Text::new(&text_container.text)
         .padded_w_of(ids.canvas, MARGIN)
         .down(60.0)
@@ -121,7 +175,6 @@ pub fn ynbox(ui: &mut conrod::UiCell, ids: &YNIds, _app: &mut EmptyApp, text_con
 
     None 
 }
-
 
 
 widget_ids! {
@@ -161,38 +214,101 @@ impl TextContainer for MsgTextContainer{
     }
 }
 
-pub fn msgbox(ui: &mut conrod::UiCell, ids: &MsgIds, _app: &mut EmptyApp, text_container: &MsgTextContainer) -> Option<bool>{
+// pub fn msgbox(ids: &MsgIds, conset: &mut ConrodSettings<MsgTextContainer>) -> Option<bool>{
+pub fn msgbox(text_container: &MsgTextContainer) -> Option<bool>{
+
     use conrod::{widget, Labelable, Positionable, Sizeable, Widget};
+    use conrod::glium::Surface;
     // use conrod::Colorable //unused so far
 
-    //Canvas
-    widget::Canvas::new().pad(MARGIN).scroll_kids_vertically().set(ids.canvas, ui);
+    let mut conset = ConrodSettings::load_defaults(text_container);
+    let ids = MsgIds::new(conset.ui.widget_id_generator());
 
-    //Title
-    widget::Text::new(&text_container.title).font_size(TITLE_SIZE).mid_top_of(ids.canvas).set(ids.title, ui);
+    let _app = {};
 
-    // Text   
-    widget::Text::new(&text_container.text)
-        .padded_w_of(ids.canvas, MARGIN)
-        .down(60.0)
-        .align_middle_x_of(ids.canvas)
-        .center_justify()
-        .line_spacing(5.0)
-        .set(ids.text, ui);
+    let mut confirmation_state = None;
 
-    //Ok button
-    let button_side = 100.0;
-    for _press in widget::Button::new()
-        .label(&text_container.okbutton)
-        //.mid_left_with_margin_on(ids.canvas, MARGIN)
-        .mid_bottom()
-        .down_from(ids.text, 60.0)
-        .w_h(button_side, button_side)
-        .set(ids.okbutton, ui)
-        {
-            return Some(true);
+    {
+        let ui_cell = &mut conset.ui.set_widgets();
+
+        //Canvas
+        widget::Canvas::new()
+            .pad(MARGIN)
+            .scroll_kids_vertically()
+            .set(ids.canvas, ui_cell);
+
+        //Title
+        widget::Text::new(&text_container.title)
+            .font_size(TITLE_SIZE)
+            .mid_top_of(ids.canvas)
+            .set(ids.title, ui_cell);
+
+        // Text   
+        widget::Text::new(&text_container.text)
+            .padded_w_of(ids.canvas, MARGIN)
+            .down(60.0)
+            .align_middle_x_of(ids.canvas)
+            .center_justify()
+            .line_spacing(5.0)
+            .set(ids.text, ui_cell);
+
+        //Ok button
+        let button_side = 100.0;
+        for _press in widget::Button::new()
+            .label(&text_container.okbutton)
+            //.mid_left_with_margin_on(ids.canvas, MARGIN)
+            .mid_bottom()
+            .down_from(ids.text, 50.0)
+            .w_h(button_side, button_side)
+            .set(ids.okbutton, ui_cell)
+            {
+                confirmation_state = Some(true);
+            }
+    }
+        
+
+    let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
+        'ynlabel: loop {
+            for event in conset.event_loop.next(&mut conset.events_loop) { 
+                if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &conset.display) {
+                    conset.ui.handle_event(event);
+                    conset.event_loop.needs_update();
+                }
+                match event {
+                    //handle all events that request closing of the application
+                    //use glium::glutin;
+
+                    glium::glutin::Event::WindowEvent {event, ..} => match event {
+                        glium::glutin::WindowEvent::CloseRequested |
+                        glium::glutin::WindowEvent::KeyboardInput { 
+                            input: glium::glutin::KeyboardInput {
+                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
+                                ..
+                            },
+                            ..
+                        } => break 'ynlabel,
+                        _ => (),
+                    }
+                    _ => (),
+                }
+
+            }
+            // User has clicked the confirm button
+            if let Some(response) = confirmation_state{
+                return Some(response);
+            }
+
+            if let Some(primitives) = conset.ui.draw_if_changed() {
+                renderer.fill(&conset.display, primitives, &conset.image_map);
+                let mut target = conset.display.draw();
+                target.clear_color(0.0, 0.0, 0.0, 1.0);
+                renderer.draw(&conset.display, &mut target, &conset.image_map).unwrap();
+                target.finish().unwrap();
+            }
         }
-    None 
+
+    //UI gets exited without user making a choice
+    None
 }
 
 widget_ids! {
@@ -314,7 +430,7 @@ pub fn listbox_single(ui: &mut conrod::UiCell, ids: &ListIds, _app: &mut EmptyAp
     None
 }
 
-pub fn listbox_multiple(){
+pub fn listbox_multiple(text_container: &ListTextContainer){
     use find_folder;
     use support;
     //use conrod::{widget, Colorable, Labelable, Positionable, Sizeable, Widget};
@@ -333,7 +449,7 @@ pub fn listbox_multiple(){
     // Build the window.
     let mut events_loop = glium::glutin::EventsLoop::new();
     let window = glium::glutin::WindowBuilder::new()
-        .with_title("ListSelect Demo")
+        .with_title(text_container.title.clone())
         .with_dimensions((WIDTH, HEIGHT).into());
     let context = glium::glutin::ContextBuilder::new()
         .with_vsync(true)
@@ -344,7 +460,8 @@ pub fn listbox_multiple(){
     let mut ui = conrod::UiBuilder::new([WIDTH as f64, HEIGHT as f64]).build();
 
     // A unique identifier for each widget.
-    let ids = Ids::new(ui.widget_id_generator());
+    //let ids = Ids::new(ui.widget_id_generator());
+    let ids = ListIds::new(ui.widget_id_generator());
 
     // Add a `Font` to the `Ui`'s `font::Map` from file.
     let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
@@ -359,24 +476,25 @@ pub fn listbox_multiple(){
     let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
 
     // List of entries to display. They should implement the Display trait.
-    let list_items = [
-        "African Sideneck Turtle".to_string(),
-        "Alligator Snapping Turtle".to_string(),
-        "Common Snapping Turtle".to_string(),
-        "Indian Peacock Softshelled Turtle".to_string(),
-        "Eastern River Cooter".to_string(),
-        "Eastern Snake Necked Turtle".to_string(),
-        "Diamond Terrapin".to_string(),
-        "Indian Peacock Softshelled Turtle".to_string(),
-        "Musk Turtle".to_string(),
-        "Reeves Turtle".to_string(),
-        "Eastern Spiny Softshell Turtle".to_string(),
-        "Red Ear Slider Turtle".to_string(),
-        "Indian Tent Turtle".to_string(),
-        "Mud Turtle".to_string(),
-        "Painted Turtle".to_string(),
-        "Spotted Turtle".to_string()
-    ];
+    // let list_items = [
+    //     "African Sideneck Turtle".to_string(),
+    //     "Alligator Snapping Turtle".to_string(),
+    //     "Common Snapping Turtle".to_string(),
+    //     "Indian Peacock Softshelled Turtle".to_string(),
+    //     "Eastern River Cooter".to_string(),
+    //     "Eastern Snake Necked Turtle".to_string(),
+    //     "Diamond Terrapin".to_string(),
+    //     "Indian Peacock Softshelled Turtle".to_string(),
+    //     "Musk Turtle".to_string(),
+    //     "Reeves Turtle".to_string(),
+    //     "Eastern Spiny Softshell Turtle".to_string(),
+    //     "Red Ear Slider Turtle".to_string(),
+    //     "Indian Tent Turtle".to_string(),
+    //     "Mud Turtle".to_string(),
+    //     "Painted Turtle".to_string(),
+    //     "Spotted Turtle".to_string()
+    // ];
+    let list_items = text_container.list_items.clone();
 
     // List of selections, should be same length as list of entries. Will be updated by the widget.
     let mut list_selected = std::collections::HashSet::new();

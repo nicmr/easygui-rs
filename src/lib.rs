@@ -33,7 +33,8 @@ mod tests {
 
     #[test]
     fn other_list_test(){
-        feature::listbox_multiple()
+        let list = vec! [ String::from("Dog"), String::from("Cat"), String::from("Elephant")];
+        feature::listbox_multiple(&list);
     }
 }
 
@@ -58,8 +59,7 @@ pub mod feature{
     use conrod::backend::glium::glium::{self, Surface};
 
     // The initial width and height in "points".
-    const WIN_W: u32 = constants::WIN_W;
-    const WIN_H: u32 = constants::WIN_H;
+    use constants::{WIN_H, WIN_W};
 
     pub fn example() {
 
@@ -211,49 +211,9 @@ pub mod feature{
     pub fn msgbox(title: &str, text: &str, okbutton: &str) -> Option<bool>{
 
         let msgtextcontainer = boxes::MsgTextContainer::from_strs(title, text, okbutton);
-        let mut conset = ConrodSettings::load_defaults(msgtextcontainer);
+        let mut conset = boxes::ConrodSettings::load_defaults(msgtextcontainer);
         let ids = boxes::MsgIds::new(conset.ui.widget_id_generator());
-
-        let mut renderer = conrod::backend::glium::Renderer::new(&conset.display).unwrap();
-        'ynlabel: loop {
-            for event in conset.event_loop.next(&mut conset.events_loop) { 
-                if let Some(event) = conrod::backend::winit::convert_event(event.clone(), &conset.display) {
-                    conset.ui.handle_event(event);
-                    conset.event_loop.needs_update();
-                }
-                match event {
-                    //handle all events that request closing of the application
-                    //use glium::glutin;
-
-                    glium::glutin::Event::WindowEvent {event, ..} => match event {
-                        glium::glutin::WindowEvent::CloseRequested |
-                        glium::glutin::WindowEvent::KeyboardInput { 
-                            input: glium::glutin::KeyboardInput {
-                                virtual_keycode: Some(glium::glutin::VirtualKeyCode::Escape),
-                                ..
-                            },
-                            ..
-                        } => break 'ynlabel,
-                        _ => (),
-                    }
-                    _ => (),
-                }
-
-            }
-            if let Some(response) = boxes::msgbox(&mut conset.ui.set_widgets(), &ids, &mut conset.app, &conset.text_container){
-                return Some(response);
-            }
-
-            if let Some(primitives) = conset.ui.draw_if_changed() {
-                renderer.fill(&conset.display, primitives, &conset.image_map); //possilby not needed, no images used
-                let mut target = conset.display.draw();
-                target.clear_color(0.0, 0.0, 0.0, 1.0);
-                renderer.draw(&conset.display, &mut target, &conset.image_map).unwrap();
-                target.finish().unwrap();
-            }
-        }
-        //UI gets exited without user making a choice
-        None
+        boxes::msgbox(&conset.text_container)   
     }
 
     pub fn listbox(title: &str, text: &str, list: &Vec<String>) -> Option<usize>{
@@ -303,8 +263,9 @@ pub mod feature{
 
         None
     }
-    pub fn listbox_multiple(){
-        boxes::listbox_multiple();
+    pub fn listbox_multiple(list: &Vec<String>){
+        let text_container = boxes::ListTextContainer::from_strs("sometitle", "sometext", list);
+        boxes::listbox_multiple(&text_container);
     }
 
 
@@ -321,6 +282,8 @@ pub mod feature{
     impl<T> ConrodSettings<T> where T: TextContainer{
         /// Returns a struct that contains the default settings to open a conrod window with
         pub fn load_defaults(textcontainer: T) -> ConrodSettings<T>{
+
+            use constants::{WIN_H, WIN_W};
 
 
             let events_loop = glium::glutin::EventsLoop::new();
